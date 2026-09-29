@@ -9,3 +9,4 @@ site/pipeline_out/
 site/.venv/
 .playwright-mcp/
 .claude/
+video/

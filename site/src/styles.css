@@ -1,0 +1,474 @@
+/* ============================================================
+   Neil & Vishruti: design tokens + shell
+   ============================================================ */
+:root {
+  /* palette */
+  --thread: #C8102E;
+  --thread-glow: rgba(255, 70, 70, 0.45);
+  --gold: #D4AF37;
+  --gold-soft: rgba(212, 175, 55, 0.55);
+
+  --ink-dark: #2B1D0E;      /* text on light cards */
+  --ink-light: #FFF8EC;     /* text on dark cards */
+
+  --card-light: rgba(255, 250, 240, 0.55);
+  --card-dark: rgba(12, 16, 40, 0.45);
+  --card-light-solid: rgba(255, 250, 240, 0.92); /* backdrop-filter fallback */
+  --card-dark-solid: rgba(12, 16, 40, 0.86);
+
+  /* per-card accents */
+  --acc-haldi: #D9A21B;
+  --acc-sangeet: #8FA8FF;
+  --acc-wedding: #B3261E;
+  --acc-wedding-2: #E8891C;
+  --acc-reception: #1F7A5C;
+  --acc-reception-2: #D4AF37;
+  --acc-rsvp: #C8102E;
+
+  /* type */
+  --f-names: "Pinyon Script", cursive;
+  --f-title: "Cormorant Garamond", serif;
+  --f-body: "DM Sans", system-ui, sans-serif;
+  --f-deva: "Noto Serif Devanagari", serif;
+
+  /* One stable screen-height unit for every pinned stage and section: the
+     large viewport (address bar hidden). Unlike dvh it doesn't change as the
+     phone's address bar slides in and out, so pins never drift out of step
+     with their scroll lengths. The JS reads the same value (appH()). */
+  --u: 1vh;
+}
+@supports (height: 1lvh) { :root { --u: 1lvh; } }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+@media (min-width: 600px) { html { scrollbar-gutter: stable; } } /* desktop: the column stays put when the tap gate locks scrolling */
+body {
+  font-family: var(--f-body);
+  color: var(--ink-light);
+  background: #0c1028;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+img { max-width: 100%; display: block; }
+
+/* scroll is locked until the guest taps (Screen 0) */
+html.locked, html.locked body { overflow: hidden; height: 100dvh; overscroll-behavior: none; }
+
+/* ============================================================
+   Stage / sections
+   ============================================================ */
+#scene {
+  position: relative;
+  width: 100%;
+}
+
+/* each screen: a tall spacer whose inner .stage is pinned across it */
+.screen {
+  position: relative;
+  width: 100%;
+}
+.stage {
+  position: relative;
+  width: 100%;
+  height: calc(var(--u) * 100);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stage__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+/* skeleton placeholder label (removed as real screens are built) */
+.stage__label {
+  position: relative;
+  z-index: 3;
+  text-align: center;
+  font-family: var(--f-title);
+  color: var(--ink-light);
+  background: rgba(12, 16, 40, 0.35);
+  backdrop-filter: blur(4px);
+  padding: 14px 20px;
+  border-radius: 14px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+}
+.stage__label small { font-family: var(--f-body); opacity: 0.8; display:block; margin-top:4px; letter-spacing:0.05em; }
+
+/* ============================================================
+   Frosted text cards (5.2)
+   ============================================================ */
+.card {
+  position: relative;
+  z-index: 50;
+  width: min(88vw, 420px);
+  border-radius: 20px;
+  padding: 24px 22px;
+  border: 1px solid var(--gold-soft);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+}
+.card--light { background: var(--card-light); color: var(--ink-dark); }
+.card--dark  { background: var(--card-dark);  color: var(--ink-light); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card--light { background: var(--card-light-solid); }
+  .card--dark  { background: var(--card-dark-solid); }
+}
+/* low-end devices flagged in JS drop the blur for framerate */
+body.no-blur .card { backdrop-filter: none; -webkit-backdrop-filter: none; }
+body.no-blur .card--light { background: var(--card-light-solid); }
+body.no-blur .card--dark  { background: var(--card-dark-solid); }
+
+.card .names { font-family: var(--f-names); font-size: 44px; line-height: 1; }
+.card .title { font-family: var(--f-title); font-weight: 600; font-size: 34px; margin: 0 0 10px; }
+.card .label {
+  font-family: var(--f-body); font-weight: 500; font-size: 12px;
+  text-transform: uppercase; letter-spacing: 0.14em;
+}
+.card .beat { font-family: var(--f-title); font-style: italic; font-size: 20px; line-height: 1.4; }
+.card p { font-size: 17px; line-height: 1.5; margin: 8px 0; }
+
+/* ============================================================
+   Buttons (5.5)
+   ============================================================ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 0 22px; border-radius: 999px;
+  font-family: var(--f-body); font-weight: 500; font-size: 16px;
+  cursor: pointer; border: 2px solid transparent; width: 100%;
+  transition: transform 0.08s ease, filter 0.15s ease;
+  text-decoration: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn--outline { background: transparent; border-color: currentColor; color: inherit; }
+.btn--solid { background: var(--thread); color: #fff; }
+.btn--solid:active { filter: brightness(0.9); }
+
+/* ============================================================
+   Screen 0 · tap to open
+   ============================================================ */
+#tap-gate {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 22px; text-align: center; padding: 24px; overflow: hidden;
+  color: var(--ink-light);
+  background: #0c1028;
+}
+#tap-gate .gate-bg {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  filter: blur(20px) brightness(0.62); transform: scale(1.1); z-index: 0;
+}
+#tap-gate > * { position: relative; z-index: 1; }
+#tap-gate .invocation { font-family: var(--f-deva); font-size: 22px; letter-spacing: 0.02em; text-shadow: 0 2px 14px rgba(0,0,0,0.6); }
+#tap-gate .gate-names { font-family: var(--f-names); font-size: 64px; line-height: 1; text-shadow: 0 3px 20px rgba(0,0,0,0.55); }
+#tap-gate .tap-btn {
+  font-family: var(--f-body); font-size: 17px; letter-spacing: 0.04em;
+  padding: 15px 34px; border-radius: 999px; cursor: pointer;
+  color: var(--ink-light); background: rgba(200,16,46,0.85);
+  border: 1px solid var(--gold-soft); box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+  min-height: 48px;
+}
+#tap-gate .tap-btn:active { transform: scale(0.96); }
+#tap-gate .sound-note { font-size: 13px; opacity: 0.85; letter-spacing: 0.06em; }
+#tap-gate.hidden { opacity: 0; pointer-events: none; }
+
+/* ============================================================
+   Persistent UI: sound toggle (7.1) + scroll hint (7.2)
+   ============================================================ */
+#sound-toggle {
+  position: fixed; top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right));
+  z-index: 150; width: 44px; height: 44px; border-radius: 999px;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(12,16,40,0.4); border: 1px solid var(--gold-soft);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: var(--ink-light); cursor: pointer;
+}
+#sound-toggle.show { display: inline-flex; }
+#sound-toggle svg { width: 20px; height: 20px; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+#scroll-hint {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(26px + env(safe-area-inset-bottom)); z-index: 150;
+  display: none; flex-direction: column; align-items: center; gap: 4px;
+  color: var(--ink-light); font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.6); pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+#scroll-hint.show { display: flex; }
+#scroll-hint .chev { width: 18px; height: 18px; animation: bob 1.6s ease-in-out infinite; }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+
+/* ============================================================
+   Desktop column (7.4) + landscape guard (7.5)
+   ============================================================ */
+@media (min-width: 600px) {
+  #scene, #tap-gate { max-width: 480px; margin: 0 auto; }
+  #tap-gate { box-shadow: 0 0 80px rgba(0, 0, 0, 0.45); }
+  #scene { box-shadow: 0 0 80px rgba(0, 0, 0, 0.45); }
+  /* keep the sound toggle inside the column */
+  #sound-toggle { right: calc(50% - 240px + 12px); }
+  #desktop-bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: #0c1028; }
+  #desktop-bg i {
+    position: absolute; inset: -60px; background: center / cover no-repeat;
+    filter: blur(28px) brightness(0.62) saturate(1.1);
+    opacity: 0; transition: opacity 1.2s ease;
+  }
+  #desktop-bg i.on { opacity: 1; }
+}
+#desktop-bg { display: none; }
+@media (min-width: 600px) { #desktop-bg { display: block; } }
+
+#landscape-guard {
+  position: fixed; inset: 0; z-index: 500; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  background: #0c1028; color: var(--ink-light); text-align: center; padding: 30px;
+  font-family: var(--f-title); font-size: 24px;
+}
+#landscape-guard svg { width: 46px; height: 46px; opacity: 0.85; }
+@media (max-height: 500px) and (orientation: landscape) {
+  #landscape-guard { display: flex; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #scroll-hint .chev { animation: none; }
+}
+
+/* ============================================================
+   The red thread (5.1)
+   ============================================================ */
+.thread { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.thread path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.thread__core  { stroke: var(--thread); stroke-width: 2.5; }
+.thread__glow  { stroke: var(--thread-glow); stroke-width: 6; }
+.thread__glow2 { stroke: rgba(255, 70, 70, 0.14); stroke-width: 12; }
+@media (min-width: 600px) { .thread__core { stroke-width: 3; } }
+
+/* ============================================================
+   Screens 1 & 2 · the school, the tie, the sky
+   ============================================================ */
+.stage--opening { background: #f3b27a; }
+.stage--opening .plane { position: absolute; will-change: transform; }
+.stage--opening .plane > img:first-child { width: 100%; height: 100%; object-fit: cover; }
+.plane--sky    { z-index: 1; }
+.plane--plate  { z-index: 2; }
+.plane--hands  { z-index: 3; visibility: hidden; }
+/* while tilting, the plate's own sky fades into s2_sky: one tall image */
+.plane--plate.is-tilting {
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 16%);
+          mask-image: linear-gradient(180deg, transparent 0%, #000 16%);
+}
+.kid { position: absolute; height: auto; max-width: none; }
+
+.stage--opening .thread-slot { position: absolute; inset: 0; z-index: 4; }
+.clouds { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.clouds img { position: absolute; top: 0; height: auto; max-width: none; opacity: 0.95; visibility: hidden; will-change: transform; }
+.dim { position: absolute; inset: 0; z-index: 6; background: #000; opacity: 0; pointer-events: none; }
+
+.beat-card {
+  position: absolute; z-index: 10; left: 0; right: 0; margin: 0 auto;
+  top: calc(var(--u) * 13 + env(safe-area-inset-top));
+  text-align: center; opacity: 0; visibility: hidden;
+}
+.beat-card .beat { margin: 0; text-wrap: balance; }
+
+.sky-text {
+  position: absolute; z-index: 10; left: 0; right: 0; top: 28%;
+  padding: 0 56px; text-align: center; color: #fff; text-wrap: balance;
+  text-shadow: 0 1px 3px rgba(40, 20, 60, 0.35), 0 2px 18px rgba(40, 20, 60, 0.45);
+}
+.sky-text > div { opacity: 0; visibility: hidden; }
+.sky-names  { font-family: var(--f-names); font-size: 44px; line-height: 1.05; margin-bottom: 14px; white-space: nowrap; }
+.sky-invite { font-family: var(--f-title); font-style: italic; font-size: 21px; line-height: 1.35; margin-bottom: 12px; }
+.sky-date   { font-family: var(--f-body); font-size: 16px; letter-spacing: 0.03em; white-space: nowrap; }
+.sky-follow { font-family: var(--f-body); font-size: 13px; letter-spacing: 0.12em; margin-top: 34px; opacity: 0.9; }
+
+/* ============================================================
+   Edge blends: each screen fades into its neighbouring transition
+   ============================================================ */
+.edge { position: absolute; left: 0; right: 0; height: 22%; pointer-events: none; opacity: 0; }
+.edge--top    { top: 0;    background: linear-gradient(180deg, var(--c), transparent); opacity: 1; }
+.edge--bottom { bottom: 0; background: linear-gradient(0deg,   var(--c), transparent); }
+.stage--opening .edge { z-index: 3; }
+
+/* ============================================================
+   Transitions (unpinned)
+   ============================================================ */
+.transition { position: relative; overflow: hidden; }
+.transition .thread-slot { position: absolute; inset: 0; z-index: 2; }
+
+.sprites { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.sprites img { position: absolute; left: 0; top: 0; height: auto; max-width: none; will-change: transform; }
+
+.stars { position: absolute; inset: 0; pointer-events: none; }
+.stars i { position: absolute; border-radius: 50%; opacity: 0.7;
+  background: radial-gradient(circle, #fff 0 45%, rgba(255, 255, 255, 0.35) 60%, transparent 75%); }
+.stars.is-live i { animation: star ease-in-out infinite alternate; }
+@keyframes star { from { opacity: 0.2; } to { opacity: 1; } }
+
+/* ============================================================
+   Screens 3 to 6 · event pattern
+   ============================================================ */
+.acc--haldi     { --acc: #D9A21B; --acc-text: #8A5D00; }  /* turmeric; text shade darkened for legibility on the light card */
+.acc--sangeet   { --acc: #8FA8FF; --acc-text: #8FA8FF; }
+.acc--wedding   { --acc: #B3261E; --acc-2: #E8891C; --acc-text: #B3261E; }
+.acc--reception { --acc: #1F7A5C; --acc-2: #D4AF37; --acc-text: #D4AF37; }
+
+.stage--event { background: #111; }
+.stage--event .plane { position: absolute; will-change: transform; }
+.stage--event .plane > img { position: absolute; }
+.stage--event .plane--plate > img, .stage--event .plane--blur > img { inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.stage--event .plane--couple > img { height: auto; max-width: none; }
+.plane--plate  { z-index: 1; }
+.plane--couple { z-index: 2; transform-origin: 50% 80%; }
+.plane--blur   { z-index: 3; opacity: 0; }
+.plane--blur > img { transform: scale(1.04); }
+.stage--event .sprites--stage { z-index: 4; }
+.stage--event .dim { z-index: 5; }
+.topshade { position: absolute; left: 0; right: 0; top: 0; height: 60%; z-index: 6; pointer-events: none; opacity: 0;
+  background: linear-gradient(180deg, rgba(5, 8, 25, 0.7) 0%, rgba(5, 8, 25, 0.35) 55%, transparent 100%); }
+.stage--event .edge { z-index: 7; }
+.meteors { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.plane--plate ~ .meteors { z-index: 1; }
+.meteors > div { position: absolute; width: 0; height: 0; }
+.meteors i { position: absolute; left: 0; top: -1px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95));
+  box-shadow: 0 0 6px rgba(180, 200, 255, 0.8); }
+
+.track { position: absolute; left: 0; right: 0; top: 0; z-index: 8; will-change: transform; pointer-events: none; }
+.track .thread-back, .track .thread-front { position: absolute; inset: 0; }
+.track .thread-back { z-index: 1; }
+.track .icons { position: absolute; inset: 0; z-index: 2; }
+.track .thread-front { z-index: 3; }
+.ev-icon { position: absolute; object-fit: contain; visibility: hidden; opacity: 0;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.28)); }
+
+.ev-card { position: absolute; z-index: 4; left: 0; right: 0; margin: 0 auto; text-align: center;
+  pointer-events: auto; visibility: hidden; opacity: 0; }
+.ev-card .title { line-height: 1.1; }
+.ev-card .divider { width: 60px; height: 1.5px; margin: 12px auto 14px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--acc), var(--acc-2, var(--acc))); }
+.ev-card .label { color: var(--acc-text); margin-right: 2px; }
+.ev-card .line { font-size: 17px; line-height: 1.5; margin: 6px 0; }
+.ev-card .beat { margin: 12px 0; text-wrap: balance; }
+.ev-card--details p { margin: 4px 0; }
+.ev-card--details .date { font-weight: 500; }
+.ev-card--details .venue { margin-top: 12px; }
+.ev-card--details .addr { opacity: 0.85; }
+.btn--dir { margin-top: 18px; color: var(--acc-text); border-color: var(--acc); border-width: 1.5px; }
+.btn--dir svg { width: 18px; height: 18px; flex: none; }
+.btn--dir:active { background: color-mix(in srgb, var(--acc) 20%, transparent); }
+
+/* fairy lights and diya flames */
+.glows { position: absolute; inset: 0; pointer-events: none; }
+.glows i { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; opacity: 0.4;
+  background: radial-gradient(circle, rgba(255, 236, 170, 0.95) 0%, rgba(255, 190, 90, 0.5) 38%, transparent 70%); }
+.glows--twinkle.is-live i { animation: twinkle ease-in-out infinite alternate; }
+.glows--flicker i { background: radial-gradient(circle, rgba(255, 220, 130, 0.75) 0%, rgba(255, 150, 40, 0.35) 40%, transparent 70%); }
+.glows--flicker.is-live i { animation: flicker ease-in-out infinite; }
+@keyframes twinkle { from { opacity: 0.1; } to { opacity: 0.85; } }
+@keyframes flicker {
+  0%   { opacity: 0.55; transform: translate(-50%, -50%) scale(0.92); }
+  30%  { opacity: 0.9;  transform: translate(-50%, -50%) scale(1.05); }
+  55%  { opacity: 0.65; transform: translate(-50%, -50%) scale(0.97); }
+  80%  { opacity: 0.95; transform: translate(-50%, -50%) scale(1.08); }
+  100% { opacity: 0.55; transform: translate(-50%, -50%) scale(0.92); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glows i, .stars i { animation: none !important; }
+}
+
+/* ============================================================
+   Screen 7 · Prayagraj
+   ============================================================ */
+.acc--rsvp { --acc: #C8102E; --acc-text: #C8102E; }
+.stage--s7 .thread-slot, .stage--s8 .thread-slot { position: absolute; inset: 0; z-index: 8; }
+.stage--s7 .beat-card, .stage--s8 .beat-card { z-index: 10; }
+.glows--sparkle i {
+  background: radial-gradient(circle, rgba(255, 255, 240, 0.95) 0%, rgba(255, 230, 170, 0.45) 30%, transparent 65%);
+  opacity: 0;
+}
+.glows--sparkle.is-live i { animation: sparkle ease-in-out infinite; }
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  45% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.1); }
+  60% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.9); }
+}
+
+/* ============================================================
+   RSVP (normal flow: never pinned or scrubbed)
+   ============================================================ */
+.rsvp-section {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(var(--u) * 18) 0;
+}
+.rsvp-bg { position: absolute; inset: 0; background: center / cover no-repeat; }
+.rsvp-bg::after { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.3); }
+.rsvp-section .edge { z-index: 1; }
+.rsvp-card { position: relative; z-index: 5; text-align: center; }
+.rsvp-card .title { line-height: 1.1; }
+.rsvp-card .divider, .closing-card .divider { width: 60px; height: 1.5px; margin: 12px auto 14px; border-radius: 2px; background: var(--acc); }
+.rsvp-card .rsvp-lede { font-family: var(--f-title); font-style: italic; font-size: 20px; line-height: 1.4; margin: 0 0 18px; text-wrap: balance; }
+.rsvp-form { display: grid; gap: 12px; text-align: left; }
+.field { display: grid; gap: 6px; }
+.field span { font-weight: 500; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--acc-text); }
+.field input {
+  font: 400 17px/1.3 var(--f-body); color: var(--ink-dark);  /* >= 16px: no iOS zoom on focus */
+  padding: 12px 14px; min-height: 48px; border-radius: 12px;
+  border: 1px solid rgba(43, 29, 14, 0.25); background: rgba(255, 255, 255, 0.78);
+  outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field input:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.18); }
+.field input[aria-invalid="true"] { border-color: var(--acc); background: rgba(255, 240, 240, 0.9); }
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.rsvp-card .rsvp-msg { margin: 0; min-height: 1.4em; font-size: 15px; line-height: 1.4; color: #9B0D24; text-align: center; }
+.rsvp-card .rsvp-msg:empty { min-height: 0; }
+.rsvp-submit { margin-top: 4px; font-size: 17px; }
+.rsvp-submit:disabled { opacity: 0.8; cursor: default; }
+.spinner { display: none; width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4); border-top-color: #fff; animation: spin 0.8s linear infinite; }
+.rsvp-submit.is-busy .spinner { display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.rsvp-card .rsvp-done { font-family: var(--f-title); font-style: italic; font-size: 22px; line-height: 1.4; margin: 6px 0 4px; }
+
+/* ============================================================
+   Screen 8 · Closing
+   ============================================================ */
+.stage--s8 .plane--hands { z-index: 2; }
+.stage--s8 .dim { z-index: 5; }
+.knot-glow {
+  position: absolute; left: 0; top: 0; z-index: 7; width: 64px; height: 64px; border-radius: 50%;
+  pointer-events: none; opacity: 0;
+  background: radial-gradient(circle, rgba(255, 120, 110, 0.55) 0%, rgba(255, 70, 70, 0.22) 40%, transparent 70%);
+}
+.closing-card { top: calc(var(--u) * 6 + env(safe-area-inset-top)); }
+.closing-card p { margin: 4px 0; text-wrap: balance; }
+.closing-card .beat { margin: 0 0 2px; }
+.closing-card .families { font-family: var(--f-title); font-weight: 600; font-size: 24px; line-height: 1.2; margin-bottom: 10px; }
+.closing-card .small { font-size: 15px; line-height: 1.45; opacity: 0.9; }
+.closing-card .contact { font-size: 16px; line-height: 1.5; }
+.closing-card .contact a { color: var(--acc-text); font-weight: 500; text-decoration: none; border-bottom: 1px solid rgba(200, 16, 46, 0.35); padding: 6px 0; }
+.closing-card .sign { margin-top: 12px; font-size: 15px; }
+.closing-card .sig-names { font-family: var(--f-names); font-size: 28px; }
+.btn--again { margin-top: 14px; color: var(--acc-text); border-color: var(--acc); border-width: 1.5px; }
+.btn--again:active { background: rgba(200, 16, 46, 0.12); }
+
+/* keyboard focus: clear rings, never on mouse/touch taps */
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 999px; }
+.field input:focus-visible { outline: none; } /* inputs have their own focus ring */
+
+/* Sections far from the screen are hidden, so phones can drop their graphics
+   layers; `is-near` is toggled from JS a screen or so ahead. Pinned stages
+   keep their layout (visibility, not display), so scroll lengths never move. */
+.screen:not(.is-near) .stage, .transition:not(.is-near) > *, .rsvp-section:not(.is-near) > * { visibility: hidden; }
+.screen:not(.is-near) .plane, .screen:not(.is-near) .track { will-change: auto; }

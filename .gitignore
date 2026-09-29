@@ -1,0 +1,11 @@
+sources/
+node_modules/
+site/node_modules/
+site/dist/
+.DS_Store
+.vercel
+site/tools/
+site/pipeline_out/
+site/.venv/
+.playwright-mcp/
+.claude/

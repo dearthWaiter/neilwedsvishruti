@@ -1,8 +1,8 @@
 // Central configuration: the scroll timeline and the RSVP endpoint.
 
-// Paste the Apps Script web-app URL here once deployed (Section 9).
-// While empty, the RSVP form logs to the console and shows success locally.
-export const RSVP_URL = "";
+// The Apps Script web app that writes RSVPs to the Google Sheet (Section 9;
+// setup in apps-script/SETUP.md). If emptied, the form only logs locally.
+export const RSVP_URL = "https://script.google.com/macros/s/AKfycbzEYvebeNA18wIFek0qpJ0B5__NJk-mIRvPWQWwUcIAFPEa8xZwu_9fEZHjZUmAxKH42w/exec";
 
 // The scroll timeline, in order. `vh` is each segment's whole scroll length.
 // Screens are pinned; transitions scroll normally.

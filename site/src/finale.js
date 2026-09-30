@@ -180,8 +180,10 @@ export function buildPrayagraj(stage, manifest, { reduced }, seg) {
 const HX = (x) => x / 1080, HY = (y) => y / 1620;
 // `half` is a little over half the finger's width, so the loop sits round it
 const HIS  = { c: [HX(478), HY(858)], dir: [0.63, 0.78], half: 19 / 1080 };   // middle of his little finger
-const HERS = { c: [HX(588), HY(871)], dir: [-0.79, 0.61], half: 21 / 1080 };  // middle of hers
-const KNOT = [HX(531), HY(884)];  // in the gap between the two fingers, above the tips
+const HERS = { c: [HX(589), HY(868)], dir: [-0.86, 0.51], half: 21 / 1080 };  // middle of hers
+// on her little finger, where her loop closes over its top edge: the knot is
+// tied on her, not floating in the gap between the fingers
+const KNOT = [HX(583), HY(858)];
 const HANDS_SCALE = 1.45;
 // where their hands meet in s7_master (hidden between them): the zoom target
 const S7_HANDS = [0.415, 0.71];
@@ -307,13 +309,13 @@ export function buildClosing(stage, manifest, { reduced }, seg, { onWatchAgain }
     P.push(both(hisLoop[0]));
 
     // the bridge: slack sagging below the fingertips, which gathers up into a
-    // small overhand knot in the gap between the fingers as `knot` goes to 1
+    // small overhand knot on her little finger as `knot` goes to 1
     const iBridge = P.length;
     const k = gsap.parseEase("power2.inOut")(sm.knot);
     const kr = (lerp(16, 8.5, clamp01((sm.knot - 0.35) / 0.65)) * (1 - 0.14 * cinch.knot)) / 1080;
     for (let i = 0; i < BRIDGE_N; i++) {
       const t = (i + 1) / (BRIDGE_N + 1);
-      const sag = [lerp(HX(500), HX(566), t), HY(900) + Math.sin(t * Math.PI) * HY(62)];
+      const sag = [lerp(HX(500), KNOT[0], t), lerp(HY(900), KNOT[1], t) + Math.sin(t * Math.PI) * HY(62)];
       const a = Math.PI * (0.9 - 2.35 * t); // ~1.2 turns: the overhand's crossing
       const kp = [KNOT[0] + Math.cos(a) * kr * (1 + 0.25 * (t - 0.5)), KNOT[1] + Math.sin(a) * kr * (2 / 3) + (t - 0.5) * HY(4)];
       P.push(both(lerpPt(sag, kp, k)));

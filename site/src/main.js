@@ -10,7 +10,7 @@ import { buildTransition } from "./transition.js";
 import { EVENTS } from "./events.js";
 import { buildPrayagraj, buildClosing } from "./finale.js";
 import { buildRsvp } from "./rsvp.js";
-import { setSrc, loadIn } from "./lazy.js";
+import { loadIn } from "./lazy.js";
 
 const BUILDERS = {
   opening: (stage, man, opts, seg) => buildOpening(stage, man, opts, seg),
@@ -47,36 +47,22 @@ function appH() {
 }
 
 // ---------------------------------------------------------------------------
-// asset helpers
-// ---------------------------------------------------------------------------
-function bgImg(key, extraClass = "stage__bg") {
-  const a = manifest[`${key}@750`], b = manifest[`${key}@1080`];
-  const img = document.createElement("img");
-  if (a && b) {
-    setSrc(img, `/${b.file}`, `/${a.file} 750w, /${b.file} 1080w`);
-    img.sizes = "(min-width: 600px) 480px, 100vw";
-  } else if (b) {
-    setSrc(img, `/${b.file}`);
-  }
-  img.className = extraClass;
-  img.decoding = "async";
-  img.alt = "";
-  return img;
-}
-
-// ---------------------------------------------------------------------------
 // build DOM
 // ---------------------------------------------------------------------------
 function buildShell() {
   app.innerHTML = `
     <div id="desktop-bg" aria-hidden="true"><i></i><i></i></div>
 
-    <div id="scene"></div>
+    <h1 class="visually-hidden">Neil &amp; Vishruti · 20 &amp; 21 November 2026</h1>
+    <main id="scene"></main>
 
     <button id="sound-toggle" aria-pressed="true" title="Sound on">
       <span class="visually-hidden">Sound on</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-on>
+      <svg class="ico-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/>
+      </svg>
+      <svg class="ico-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m16 9 6 6"/><path d="m22 9-6 6"/>
       </svg>
     </button>
 
@@ -112,15 +98,7 @@ function buildShell() {
       stage.className = "stage";
       screen.appendChild(stage);
       scene.appendChild(screen);
-      if (s.build) {
-        built.set(screen, BUILDERS[s.build](stage, manifest, { reduced: prefersReduced }, s));
-        continue;
-      }
-      stage.appendChild(bgImg(s.bg));
-      const label = document.createElement("div");
-      label.className = "stage__label";
-      label.innerHTML = `${s.label}<small>${s.vh}vh · pinned</small>`;
-      stage.appendChild(label);
+      built.set(screen, BUILDERS[s.build](stage, manifest, { reduced: prefersReduced }, s));
     } else {
       const t = document.createElement("div");
       t.id = s.id;
@@ -320,7 +298,7 @@ function initGate(audio) {
     soundBtn.setAttribute("aria-pressed", String(!muted));
     soundBtn.title = label;
     soundBtn.querySelector(".visually-hidden").textContent = label;
-    soundBtn.querySelector("svg").style.opacity = muted ? "0.4" : "1";
+
   });
 
   // scroll hint lives on Screens 1 and 2 and fades once the guest has scrolled 40vh (7.2)

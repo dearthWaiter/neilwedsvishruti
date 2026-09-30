@@ -182,7 +182,7 @@ export function buildClosing(stage, manifest, { reduced }, seg, { onWatchAgain }
       <p class="contact">Atul Srivastava · <a href="tel:+919415270027">+91 94152 70027</a></p>
       <p class="contact">Natasha Sarkar · <a href="tel:+918744850939">+91 87448 50939</a></p>
       <p class="sign"><span class="sig-names">Neil &amp; Vishruti</span> · 21.11.2026</p>
-      <button class="btn btn--outline btn--again" type="button"><span aria-hidden="true">↺</span> Watch again</button>
+      <button class="btn btn--outline btn--again" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span>Watch again</span></button>
     </div>
   `;
   const $ = (s) => stage.querySelector(s);

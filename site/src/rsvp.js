@@ -54,6 +54,7 @@ export function buildRsvp(el, manifest, { reduced }, seg) {
 
   const showDone = (name) => {
     form.remove();
+    el.querySelector(".rsvp-lede").remove(); // the ask is answered: just the thanks remains
     done.textContent = MSG.success(name);
     done.hidden = false;
   };

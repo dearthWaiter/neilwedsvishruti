@@ -29,9 +29,11 @@ const GIRL_HAND = [0.05, 0.53];
 // s1_hands, measured on the 1080x1620 export (left hand is his, right is hers)
 const HX = (x) => x / 1080, HY = (y) => y / 1620;
 const HER_TIPS  = [HX(540), HY(962)];     // her index/thumb pinch
-const PINKY     = [HX(262), HY(1036)];    // middle of his little finger
-const PINKY_DIR = [0.43, 0.90];           // finger's direction (down-right)
-const PINKY_HALF_W = 17 / 1080;           // half the finger's width
+// His little finger is the one extended to the right, toward her fingers
+// (the digit curled at the bottom left is his thumb).
+const PINKY     = [HX(475), HY(961)];     // middle of his little finger
+const PINKY_DIR = [0.84, 0.55];           // finger's direction (down-right, toward the tip)
+const PINKY_HALF_W = 21 / 1080;           // a little over half the finger's width
 const LOOP_N = 8;
 const HANDS_SCALE = 1.3; // the close-up is held a little zoomed, so his pinky can sit on PINKY_ANCHOR
 
@@ -228,8 +230,9 @@ export function buildOpening(stage, manifest, { reduced }, seg) {
     const P = [];
     // her fingertips -> a sagging run -> into the loop
     P.push(both(HER_TIPS, girlHand));
-    P.push(both([HX(410), HY(1092)], [lerp(boyHand[0], girlHand[0], 0.5), boyHand[1] + 0.012]));
-    P.push(both([HX(305), HY(1066)], [boyHand[0] + 0.004, boyHand[1] + 0.004]));
+    // (a short, soft sag just above his fingertip, then onto the finger)
+    P.push(both([HX(522), HY(958)], [lerp(boyHand[0], girlHand[0], 0.5), boyHand[1] + 0.012]));
+    P.push(both([HX(496), HY(949)], [boyHand[0] + 0.004, boyHand[1] + 0.004]));
 
     // the loop around his little finger: an ellipse across the finger,
     // flattened along it so it reads as wrapping round rather than lying on top
@@ -243,9 +246,9 @@ export function buildOpening(stage, manifest, { reduced }, seg) {
     }
 
     // the free end trails upward: out of the loop, up the frame
-    P.push(both([HX(282), HY(990)], [boyHand[0], boyHand[1] - 0.01]));
-    P.push(both([HX(330), HY(820)], [boyHand[0] - 0.005, boyHand[1] - 0.12]));
-    P.push(both([HX(360), HY(520)], [boyHand[0] - 0.03, 0.34 - 0.02 * sm.drift]));
+    P.push(both([HX(452), HY(928)], [boyHand[0], boyHand[1] - 0.01]));
+    P.push(both([HX(425), HY(835)], [boyHand[0] - 0.005, boyHand[1] - 0.12]));
+    P.push(both([HX(395), HY(560)], [boyHand[0] - 0.03, 0.34 - 0.02 * sm.drift]));
 
     // and on up into the sky, which sits above the frame until the tilt
     // (the thread is foreground: it does not take the scene's leaving
@@ -271,7 +274,7 @@ export function buildOpening(stage, manifest, { reduced }, seg) {
   function fingerOccluder() {
     if (sm.hands < 0.5) return [];
     const hT = handsT();
-    const L = 7 * 17, w = 2 * 17 * 1.1; // along / across, in 1080-px image units
+    const L = 130, w = 2 * PINKY_HALF_W * 1080 * 0.95; // along / across, in 1080-px image units
     const a = planeToScreen(box, PINKY[0] - (PINKY_DIR[0] * L / 2) / 1080, PINKY[1] - (PINKY_DIR[1] * L / 2) / 1620, hT);
     const b = planeToScreen(box, PINKY[0] + (PINKY_DIR[0] * L / 2) / 1080, PINKY[1] + (PINKY_DIR[1] * L / 2) / 1620, hT);
     return [[a[0], a[1], b[0], b[1], (w / 1080) * box.w * hT.s]];

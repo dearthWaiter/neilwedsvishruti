@@ -182,8 +182,9 @@ export function buildPrayagraj(stage, manifest, { reduced }, seg) {
 
 // s8_hands, measured on the 1080x1620 export. Left hand (sherwani cuff) is his.
 const HX = (x) => x / 1080, HY = (y) => y / 1620;
-const HIS  = { c: [HX(478), HY(858)], dir: [0.63, 0.78], half: 17 / 1080 };   // middle of his little finger
-const HERS = { c: [HX(590), HY(868)], dir: [-0.78, 0.62], half: 16 / 1080 };  // middle of hers
+// `half` is a little over half the finger's width, so the loop sits round it
+const HIS  = { c: [HX(478), HY(858)], dir: [0.63, 0.78], half: 19 / 1080 };   // middle of his little finger
+const HERS = { c: [HX(588), HY(871)], dir: [-0.79, 0.61], half: 21 / 1080 };  // middle of hers
 const KNOT = [HX(531), HY(884)];  // in the gap between the two fingers, above the tips
 const HANDS_SCALE = 1.45;
 // where their hands meet in s7_master (hidden between them): the zoom target
@@ -313,10 +314,11 @@ export function buildClosing(stage, manifest, { reduced }, seg, { onWatchAgain }
       P.push(both(lerpPt(sag, kp, k)));
     }
     const iHer = P.length;
-    // her loop runs the other way round, as a mirror of his, and closes on itself
-    const hers = loop(HERS, sm.loose * (1 - 0.06 * cinch.her), sm.knot).reverse();
-    for (const p of hers) P.push(both(p));
-    P.push(both(hers[0]));
+    // her loop: the thread arrives over the top of her finger, goes round
+    // behind it (points 4..7,0: hidden by the finger), and comes back across
+    // the front (0..4), closing where it came in
+    const hers = loop(HERS, sm.loose * (1 - 0.06 * cinch.her), sm.knot);
+    for (const i of [4, 5, 6, 7, 0, 1, 2, 3, 4]) P.push(both(hers[i]));
     return { P, iHis, iBridge, iHer, onH };
   }
 
@@ -367,7 +369,7 @@ export function buildClosing(stage, manifest, { reduced }, seg, { onWatchAgain }
 
     // round the backs of the fingers: his loop's far half, and hers (which
     // runs the other way round, so it's her first three points and the close)
-    const backs = [[iHis + LOOP_N / 2, iHis + LOOP_N], [iHer, iHer + 3], [iHer + LOOP_N - 1, last]];
+    const backs = [[iHis + LOOP_N / 2, iHis + LOOP_N], [iHer, iHer + LOOP_N / 2]];
     // the knot's crossing: a small gap in the under strand, as knots are drawn
     const gaps = [];
     if (sm.knot > 0.4) {

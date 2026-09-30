@@ -86,7 +86,7 @@ export function buildOpening(stage, manifest, { reduced }, seg) {
     <div class="card card--light beat-card" data-beat="2"><p class="beat">It may stretch. It may tangle. It never breaks.</p></div>
     <div class="card card--light beat-card" data-beat="3"><p class="beat">Ours was tied in a school playground.</p></div>
     <div class="sky-text">
-      <div class="sky-names">Neil &amp; Vishruti</div>
+      <div class="sky-names">Neil <span class="amp">&amp;</span> Vishruti</div>
       <div class="sky-invite">invite you to celebrate their wedding</div>
       <div class="sky-date">20 &amp; 21 November 2026 · Prayagraj</div>
       <div class="sky-follow">Follow the thread ↓</div>

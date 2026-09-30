@@ -81,7 +81,7 @@ function buildShell() {
 
     <div id="tap-gate">
       <div class="invocation">॥ ॐ श्री गणेशाय नमः ॥</div>
-      <div class="gate-names">Neil &amp; Vishruti</div>
+      <div class="gate-names">Neil <span class="amp">&amp;</span> Vishruti</div>
       <button class="tap-btn" id="tap-btn">Tap to open</button>
       <div class="sound-note">Best with sound on</div>
     </div>

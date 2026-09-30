@@ -9,7 +9,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=Pinyon+Script&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400&family=DM+Sans:wght@400;500&family=Pinyon+Script&display=swap" />
   <!-- A wrong link lands here: same look as the tap gate, and one way back. -->
   <style>
     html, body { margin: 0; height: 100%; }
@@ -23,6 +23,7 @@
     body > :not(.bg) { position: relative; z-index: 1; }
     svg { width: 72px; height: 72px; }
     .names { font-family: "Pinyon Script", cursive; font-size: 54px; line-height: 1.05; text-shadow: 0 3px 20px rgba(0,0,0,0.55); }
+    .amp { font-family: "Cormorant Garamond", serif; font-style: italic; font-size: 0.8em; margin: 0 0.06em; }
     a {
       display: inline-flex; align-items: center; min-height: 48px; padding: 0 30px; border-radius: 999px;
       font-size: 17px; letter-spacing: 0.04em; color: #FFF8EC; text-decoration: none;
@@ -40,7 +41,7 @@
     <path d="M16 5 C 7 9, 7 19, 16 20 C 25 21, 25 11, 16 13 C 10 14, 11 22, 16 27"
       fill="none" stroke="#C8102E" stroke-width="1.6" stroke-linecap="round" />
   </svg>
-  <div class="names">Neil &amp; Vishruti</div>
+  <div class="names">Neil <span class="amp">&amp;</span> Vishruti</div>
   <a href="/">Follow the thread</a>
 </body>
 </html>

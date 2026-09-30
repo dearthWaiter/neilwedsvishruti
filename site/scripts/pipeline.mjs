@@ -414,6 +414,14 @@ async function main() {
     fs.writeFileSync(path.join(OUT, "manifest.json"), JSON.stringify(manifest, null, 2));
     return;
   }
+  // one plate re-exported after its painting was regenerated, e.g. --only=plate:s5
+  if (only?.startsWith("plate:")) {
+    Object.assign(manifest, JSON.parse(fs.readFileSync(path.join(OUT, "manifest.json"), "utf8")));
+    const id = only.slice(6);
+    await exportFullbleed(`${id}_plate.png`, `${id}_plate`);
+    fs.writeFileSync(path.join(OUT, "manifest.json"), JSON.stringify(manifest, null, 2));
+    return console.log("  " + id + "_plate");
+  }
   if (only === "s3icons") {
     Object.assign(manifest, JSON.parse(fs.readFileSync(path.join(OUT, "manifest.json"), "utf8")));
     await splitSheet("s3_icons.png", S3_ICONS);

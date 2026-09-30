@@ -68,7 +68,7 @@
     "w": 750,
     "h": 1125,
     "kind": "fullbleed",
-    "kb": 130,
+    "kb": 125,
     "q": 75
   },
   "s5_plate@1080": {
@@ -76,7 +76,7 @@
     "w": 1080,
     "h": 1620,
     "kind": "fullbleed",
-    "kb": 201,
+    "kb": 192,
     "q": 75
   },
   "s6_plate@750": {
@@ -148,7 +148,7 @@
     "w": 750,
     "h": 1125,
     "kind": "fullbleed",
-    "kb": 137,
+    "kb": 128,
     "q": 60
   },
   "s7_master@1080": {
@@ -156,8 +156,8 @@
     "w": 1080,
     "h": 1620,
     "kind": "fullbleed",
-    "kb": 218,
-    "q": 60
+    "kb": 210,
+    "q": 65
   },
   "s1_boy": {
     "file": "img/s1_boy.webp",
@@ -679,16 +679,16 @@
     "w": 750,
     "h": 1125,
     "kind": "fullbleed",
-    "kb": 126,
-    "q": 60
+    "kb": 125,
+    "q": 65
   },
   "s5_master@1080": {
     "file": "img/s5_master-1080.webp",
     "w": 1080,
     "h": 1620,
     "kind": "fullbleed",
-    "kb": 213,
-    "q": 65
+    "kb": 219,
+    "q": 75
   },
   "s6_master@750": {
     "file": "img/s6_master-750.webp",

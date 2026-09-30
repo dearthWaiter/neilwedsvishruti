@@ -407,6 +407,13 @@ const S3_ICONS = {
 
 async function main() {
   const only = process.argv.find((a) => a.startsWith("--only="))?.slice(7);
+  // full paintings (couple included), shown instead of cut-outs in Part A
+  if (only === "masters") {
+    Object.assign(manifest, JSON.parse(fs.readFileSync(path.join(OUT, "manifest.json"), "utf8")));
+    for (const id of ["s3", "s4", "s5", "s6", "s7"]) { await exportFullbleed(`${id}_master.png`, `${id}_master`); console.log("  " + id + "_master"); }
+    fs.writeFileSync(path.join(OUT, "manifest.json"), JSON.stringify(manifest, null, 2));
+    return;
+  }
   if (only === "s3icons") {
     Object.assign(manifest, JSON.parse(fs.readFileSync(path.join(OUT, "manifest.json"), "utf8")));
     await splitSheet("s3_icons.png", S3_ICONS);

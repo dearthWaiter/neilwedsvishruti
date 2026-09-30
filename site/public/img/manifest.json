@@ -641,5 +641,69 @@
     "h": 810,
     "kind": "blur",
     "kb": 8
+  },
+  "s3_master@750": {
+    "file": "img/s3_master-750.webp",
+    "w": 750,
+    "h": 1125,
+    "kind": "fullbleed",
+    "kb": 139,
+    "q": 60
+  },
+  "s3_master@1080": {
+    "file": "img/s3_master-1080.webp",
+    "w": 1080,
+    "h": 1620,
+    "kind": "fullbleed",
+    "kb": 218,
+    "q": 60
+  },
+  "s4_master@750": {
+    "file": "img/s4_master-750.webp",
+    "w": 750,
+    "h": 1125,
+    "kind": "fullbleed",
+    "kb": 116,
+    "q": 80
+  },
+  "s4_master@1080": {
+    "file": "img/s4_master-1080.webp",
+    "w": 1080,
+    "h": 1620,
+    "kind": "fullbleed",
+    "kb": 185,
+    "q": 80
+  },
+  "s5_master@750": {
+    "file": "img/s5_master-750.webp",
+    "w": 750,
+    "h": 1125,
+    "kind": "fullbleed",
+    "kb": 126,
+    "q": 60
+  },
+  "s5_master@1080": {
+    "file": "img/s5_master-1080.webp",
+    "w": 1080,
+    "h": 1620,
+    "kind": "fullbleed",
+    "kb": 213,
+    "q": 65
+  },
+  "s6_master@750": {
+    "file": "img/s6_master-750.webp",
+    "w": 750,
+    "h": 1125,
+    "kind": "fullbleed",
+    "kb": 131,
+    "q": 60
+  },
+  "s6_master@1080": {
+    "file": "img/s6_master-1080.webp",
+    "w": 1080,
+    "h": 1620,
+    "kind": "fullbleed",
+    "kb": 211,
+    "q": 60
   }
 }

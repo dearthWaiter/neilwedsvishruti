@@ -31,7 +31,7 @@ export function buildEvent(stage, manifest, { reduced }, ev, seg) {
   const cardCls = `card card--${ev.variant}`;
   stage.innerHTML = `
     <div class="plane plane--plate"><img alt="" decoding="async"></div>
-    <div class="plane plane--couple"><img alt="" decoding="async"></div>
+    <div class="plane plane--couple plane--master"><img alt="" decoding="async"></div>
     <div class="plane plane--blur"><img alt="" decoding="async"></div>
     ${ev.topShade ? `<div class="topshade"></div>` : ""}
     ${seg.grade ? `<div class="grade" style="--g1:${seg.grade[0]};--g2:${seg.grade[1]}"></div>` : ""}
@@ -68,12 +68,13 @@ export function buildEvent(stage, manifest, { reduced }, ev, seg) {
     const a = manifest[`${ev.plate}@750`], b = manifest[`${ev.plate}@1080`], im = plate.querySelector("img");
     setSrc(im, `/${b.file}`, `/${a.file} 750w, /${b.file} 1080w`, "(min-width: 600px) 640px, 150vw");
     setSrc(blur.querySelector("img"), file(`${ev.plate}_blur`));
-    const c = manifest[ev.couple], bx = c.srcBox, ci = couple.querySelector("img");
-    setSrc(ci, file(ev.couple));
-    Object.assign(ci.style, {
-      left: `${(bx.minx / bx.imgW) * 100}%`, top: `${(bx.miny / bx.imgH) * 100}%`,
-      width: `${((bx.maxx - bx.minx + 1) / bx.imgW) * 100}%`,
-    });
+    // Part A shows the full painting (couple included) rather than a cut-out
+    // over the plate: translucent dupattas and skirt folds don't cut out
+    // cleanly, and the plate showed through the holes. It crossfades to the
+    // empty plate for Part B.
+    const mk = ev.couple.replace("_couple", "_master");
+    const ma = manifest[`${mk}@750`], mb = manifest[`${mk}@1080`];
+    setSrc(couple.querySelector("img"), `/${mb.file}`, `/${ma.file} 750w, /${mb.file} 1080w`, "(min-width: 600px) 640px, 150vw");
   }
   const bx = manifest[ev.couple].srcBox;
   const focusU = (bx.minx + bx.maxx) / 2 / bx.imgW; // centre the crop on the couple
@@ -250,7 +251,7 @@ export function buildEvent(stage, manifest, { reduced }, ev, seg) {
     const pass = M * H * (0.35 * st.leave - 0.35 * (1 - st.arrive));
     plate.style.transform = `translate3d(0, ${(-0.015 * H * st.drift * M + pass).toFixed(1)}px, 0)`;
     blur.style.transform = `translate3d(0, ${pass.toFixed(1)}px, 0)`;
-    couple.style.transform = `translate3d(0, ${(-0.045 * H * st.drift * M + pass).toFixed(1)}px, 0) scale(${(1 + 0.02 * st.drift * M).toFixed(4)})`;
+    couple.style.transform = plate.style.transform; // the painting moves with the plate
     couple.style.opacity = st.couple.toFixed(3);
     blur.style.opacity = st.soft.toFixed(3);
     if (grade) grade.style.opacity = st.leave.toFixed(3);

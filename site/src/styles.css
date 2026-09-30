@@ -506,3 +506,6 @@ body.no-blur .card--dark  { background: var(--card-dark-solid); }
 
 /* knot glow: positioned with `translate`, so its scale pulse is separate */
 .knot-glow { margin: -32px 0 0 -32px; }
+
+/* Part A: the full painting over the plate (not a cut-out) */
+.stage--event .plane--master > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }

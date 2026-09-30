@@ -55,7 +55,7 @@ export function buildPrayagraj(stage, manifest, { reduced }, seg) {
   stage.classList.add("stage--event", "stage--s7");
   stage.innerHTML = `
     <div class="plane plane--plate"><img alt="" decoding="async"></div>
-    <div class="plane plane--couple"><img alt="" decoding="async"></div>
+    <div class="plane plane--couple plane--master"><img alt="" decoding="async"></div>
     <div class="plane plane--blur"><img alt="" decoding="async"></div>
     <div class="edge edge--top" style="--c:${seg.top}"></div>
     <div class="edge edge--bottom" style="--c:${seg.bottom}"></div>
@@ -69,12 +69,8 @@ export function buildPrayagraj(stage, manifest, { reduced }, seg) {
   const plate = $(".plane--plate"), couple = $(".plane--couple"), blur = $(".plane--blur"), dim = $(".dim");
   srcsetImg(plate.querySelector("img"), manifest, "s7_plate");
   setSrc(blur.querySelector("img"), `/${manifest.s7_master_blur.file}`);
-  const c = manifest.s7_couple, bx = c.srcBox, ci = couple.querySelector("img");
-  setSrc(ci, `/${c.file}`);
-  Object.assign(ci.style, {
-    left: `${(bx.minx / bx.imgW) * 100}%`, top: `${(bx.miny / bx.imgH) * 100}%`,
-    width: `${((bx.maxx - bx.minx + 1) / bx.imgW) * 100}%`,
-  });
+  // the full painting (couple included), not a cut-out over the plate
+  srcsetImg(couple.querySelector("img"), manifest, "s7_master");
 
   // the water shimmer: sun glints measured on the plate, plus softer sparkles
   // scattered over the river (and nowhere else)
@@ -130,7 +126,7 @@ export function buildPrayagraj(stage, manifest, { reduced }, seg) {
     // arriving and leaving, the scene drifts at 0.65x the page: the camera passing
     const pass = M * H * (0.35 * st.leave - 0.35 * (1 - st.arrive));
     plate.style.transform = `translate3d(0, ${(-0.015 * H * d + pass).toFixed(1)}px, 0)`;
-    couple.style.transform = `translate3d(0, ${(-0.04 * H * d + pass).toFixed(1)}px, 0) scale(${(1 + 0.02 * d).toFixed(4)})`;
+    couple.style.transform = plate.style.transform; // the painting moves with the plate
     blur.style.transform = `translate3d(0, ${pass.toFixed(1)}px, 0)`;
     blur.style.opacity = st.soft.toFixed(3);
     paintDim();
@@ -240,13 +236,14 @@ export function buildClosing(stage, manifest, { reduced }, seg, { onWatchAgain }
   // the pen. `cinch`: the final pull, played in time once the knot has formed.
   const st = {
     entry: 0, tipA: 0, zoom: 0, hands: 0, arrive: 1,
+    push: 0,     // the camera easing in on the knot as it forms (0..1)
     pHis: 0,     // the pen round his little finger (tied there since Screen 1)
     pX: 0,       // across to hers
     pH: 0,       // round hers
     loose: 1.35, // loop slack (1 = snug)
     knot: 0,     // 0 = slack between the fingers, 1 = drawn into a knot
   };
-  const SMOOTH = ["entry", "tipA", "zoom", "hands", "arrive", "pHis", "pX", "pH", "loose", "knot"];
+  const SMOOTH = ["entry", "tipA", "zoom", "hands", "arrive", "push", "pHis", "pX", "pH", "loose", "knot"];
   const sm = { ...st };
   const cinch = { his: 0, her: 0, knot: 0 };
   let time = 0;
@@ -258,10 +255,18 @@ export function buildClosing(stage, manifest, { reduced }, seg, { onWatchAgain }
     return { tx: (PINKY_ANCHOR[0] * W - hx) * z, ty: (PINKY_ANCHOR[1] * H - hy) * z - M * 0.35 * H * (1 - sm.arrive),
              s: 1 + 0.6 * z, ou: S7_HANDS[0], ov: S7_HANDS[1] };
   };
+  // After the close-up arrives (his pinky on the shared anchor, rhyming with
+  // Screen 1), the camera eases in on the knot as it forms, so the two wraps
+  // are big enough to read on a phone. The knot stays where it is on screen
+  // while everything grows around it.
+  const PUSH = 0.7; // up to 1.7x the arrival framing
   const handsT = () => {
     const t = anchorTransform(box, W, H, HIS.c[0], HIS.c[1], HANDS_SCALE, PINKY_ANCHOR[0] * W, PINKY_ANCHOR[1] * H);
     if (!reduced) t.s *= 1 + 0.06 * (1 - sm.hands); // the push carries on as it crossfades in
-    return t;
+    if (reduced || sm.push <= 0) return t;
+    const k = planeToScreen(box, KNOT[0], KNOT[1], t);
+    const t2 = anchorTransform(box, W, H, KNOT[0], KNOT[1], t.s * (1 + PUSH * sm.push), k[0], k[1]);
+    return t2;
   };
 
   // loop points around a finger, as image offsets
@@ -425,6 +430,7 @@ export function buildClosing(stage, manifest, { reduced }, seg, { onWatchAgain }
   tl.to(st, { hands: 1, duration: 16, ease: "power1.inOut" }, 112);
   // the payoff, slow: across to her finger, around it, then the knot
   tl.to(st, { pX: 1, duration: 60, ease: "power2.inOut" }, 140);
+  tl.to(st, { push: 1, duration: 160, ease: "power1.inOut" }, 150);
   tl.to(st, { pH: 1, duration: 50, ease: "sine.inOut" }, 200);
   tl.to(st, { loose: 1, duration: 50, ease: "power2.inOut" }, 250);
   tl.to(st, { knot: 1, duration: 60, ease: "power2.inOut" }, 252);

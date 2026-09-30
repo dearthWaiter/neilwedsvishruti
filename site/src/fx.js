@@ -13,49 +13,52 @@ export function whileVisible(trigger, on) {
 }
 
 // Falling petals / marigolds (Section 6: 10 to 14 on screen, varied size,
-// rotation, speed and sway). Time-driven, positioned in the container's box.
+// rotation, speed and sway). Each sprite is three nested layers run by the
+// browser's own animation engine (WAAPI), so the phone's compositor plays
+// them without any per-frame JavaScript: a full-height rail that falls
+// (translateY in % of the container), a sway, and a spin.
 export function spriteField(container, srcs, { count = 12, reduced = false, size = [22, 44] } = {}) {
   const layer = document.createElement("div");
   layer.className = "sprites";
   container.appendChild(layer);
   if (reduced) return { layer, setOpacity() {} }; // 7.3: no falling sprites
 
-  const items = Array.from({ length: count }, (_, i) => {
+  const Hc = Math.max(1, container.clientHeight || window.innerHeight);
+  const anims = [];
+  for (let i = 0; i < count; i++) {
+    const s = rand(size[0], size[1]);
+    const rail = document.createElement("div");
+    rail.className = "spr";
+    rail.style.left = `${rand(0, 100).toFixed(1)}%`;
     const el = document.createElement("img");
     setSrc(el, srcs[i % srcs.length]);
     el.alt = ""; el.decoding = "async";
-    const s = rand(size[0], size[1]);
     el.style.width = `${s}px`;
-    layer.appendChild(el);
-    return {
-      el, s,
-      x: Math.random(), y: rand(-0.1, 1.05),
-      vy: rand(0.035, 0.075) * (1 + (44 - s) / 60), // smaller ones fall a touch faster
-      rot: rand(0, 360), vr: rand(-40, 40),
-      amp: rand(10, 28), f: rand(0.4, 0.9), ph: rand(0, 6.28),
-    };
-  });
+    rail.appendChild(el); layer.appendChild(rail);
 
-  let active = false, last = 0;
-  const tick = (t) => {
-    if (!active) return;
-    const dt = Math.min(0.05, t - last); last = t;
-    const W = container.clientWidth, H = container.clientHeight;
-    for (const p of items) {
-      p.y += p.vy * dt * (844 / Math.max(H, 1)) * 1.4; // screen-heights per second, independent of section height
-      p.rot += p.vr * dt;
-      if (p.y > 1.08) { p.y = -0.06; p.x = Math.random(); }
-      const x = p.x * W + Math.sin(t * p.f + p.ph) * p.amp;
-      p.el.style.transform = `translate3d(${x.toFixed(1)}px, ${(p.y * H).toFixed(1)}px, 0) rotate(${p.rot.toFixed(1)}deg)`;
-    }
-  };
-  gsap.ticker.add(tick);
-  whileVisible(container, (v) => { active = v; last = gsap.ticker.time; });
+    // screen-heights per second, as before; smaller ones fall a touch faster
+    const pxps = rand(0.035, 0.075) * (1 + (44 - s) / 60) * 1.4 * 844;
+    const fall = (1.16 * Hc) / pxps * 1000;
+    // the sway and the slow spin share one animation: out, back, out again,
+    // turning a little further each way (one keyframed loop, eased per step)
+    const amp = rand(10, 28), swayMs = rand(3.5, 7.8) * 1000, r0 = rand(0, 360), spin = rand(-40, 40) * (swayMs / 1000);
+    const sw = (x, r) => ({ transform: `translateX(${x}px) rotate(${r.toFixed(1)}deg)`, easing: "ease-in-out" });
+    anims.push(
+      rail.animate([{ transform: "translateY(-8%)" }, { transform: "translateY(108%)" }],
+        { duration: fall, iterations: Infinity, easing: "linear", delay: -rand(0, fall) }),
+      el.animate([sw(-amp, r0), sw(amp, r0 + spin / 2), sw(-amp, r0 + spin)],
+        { duration: swayMs, iterations: Infinity, delay: -rand(0, swayMs) }),
+    );
+  }
+  const run = (v) => anims.forEach((a) => (v ? a.play() : a.pause()));
+  run(false);
+  whileVisible(container, run);
   return { layer, setOpacity(o) { layer.style.opacity = o; } };
 }
 
 // Twinkling stars (CSS opacity animation only, compositor-friendly).
-export function starField(container, { count = 70, top = 0, bottom = 1 } = {}) {
+// { manual: true }: the caller switches the twinkle on (class "is-live").
+export function starField(container, { count = 70, top = 0, bottom = 1, manual = false } = {}) {
   const layer = document.createElement("div");
   layer.className = "stars";
   for (let i = 0; i < count; i++) {
@@ -70,7 +73,7 @@ export function starField(container, { count = 70, top = 0, bottom = 1 } = {}) {
     layer.appendChild(d);
   }
   container.appendChild(layer);
-  whileVisible(container, (v) => layer.classList.toggle("is-live", v));
+  if (!manual) whileVisible(container, (v) => layer.classList.toggle("is-live", v));
   return layer;
 }
 

@@ -69,7 +69,7 @@ async function shoot(y) {
   await page.evaluate(({ y, vt }) => {
     if (y != null) { window.scrollTo(0, y); window.dispatchEvent(new Event("scroll")); }
     for (const a of document.getAnimations()) {
-      if (a instanceof CSSAnimation) { a.pause(); a.currentTime = vt; }
+      if (!(a instanceof CSSTransition)) { a.pause(); a.currentTime = vt; }
     }
   }, { y, vt });
   await page.clock.runFor(1000 / FPS);

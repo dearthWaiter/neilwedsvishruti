@@ -154,6 +154,7 @@ function initScroll() {
       pin: true,
       pinSpacing: true,
       anticipatePin: 1,
+      refreshPriority: 1,
       animation: b?.tl,
       scrub: !!b,
       onRefresh: () => b?.refresh(),
@@ -282,11 +283,13 @@ function initGate(audio) {
     btn.removeEventListener("click", open);
     startLoading();
     audio.start();                          // fade in over 2s
+    // the opening's camera settles as the gate lifts
+    built.get(document.getElementById("screen-opening"))?.intro?.();
     gsap.to(gate, { opacity: 0, duration: 0.8, ease: "power2.out", onComplete: () => gate.remove() });
     document.documentElement.classList.remove("locked");
     if (lenis) lenis.start();
     soundBtn.classList.add("show");
-    hint.classList.add("show");
+    setTimeout(() => hint.classList.add("show"), 1200); // after the settle
     ScrollTrigger.refresh();
   }
   btn.addEventListener("click", open);
@@ -316,6 +319,10 @@ async function boot() {
     manifest = await (await fetch("/img/manifest.json")).json();
   } catch (e) { manifest = {}; }
 
+  // Pins must be measured before anything that measures a pinned section
+  // (a section's height includes its pin's scroll length). GSAP refreshes
+  // higher refreshPriority first: pins get 1, everything else defaults to -1.
+  ScrollTrigger.defaults({ refreshPriority: -1 });
   buildShell();
   const audio = createAudio("/audio/music.mp3");
   if (import.meta.env.DEV) { window.__audio = audio; window.__built = built; window.__ST = ScrollTrigger; } // for Playwright checks

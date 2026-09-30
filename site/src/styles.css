@@ -297,7 +297,6 @@ body.no-blur .card--dark  { background: var(--card-dark-solid); }
 .transition .thread-slot { position: absolute; inset: 0; z-index: 2; }
 
 .sprites { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
-.sprites img { position: absolute; left: 0; top: 0; height: auto; max-width: none; will-change: transform; }
 
 .stars { position: absolute; inset: 0; pointer-events: none; }
 .stars i { position: absolute; border-radius: 50%; opacity: 0.7;
@@ -483,3 +482,25 @@ body.no-blur .card--dark  { background: var(--card-dark-solid); }
 /* In the names, the "&" is set in Cormorant Garamond italic: Pinyon Script's
    own ampersand is its weakest glyph; this is the classic invitation one. */
 .amp { font-family: var(--f-title); font-style: italic; font-weight: 400; font-size: 0.8em; margin: 0 0.06em; }
+
+/* ============================================================
+   Motion pass
+   ============================================================ */
+/* falling sprites: a full-height rail per sprite (falls via translateY %),
+   a sway layer, and the spinning image; all run by WAAPI on the compositor */
+.sprites .spr { position: absolute; top: 0; height: 100%; width: 0; will-change: transform; }
+.sprites .spr img { position: absolute; top: 0; left: 0; display: block; height: auto; max-width: none; will-change: transform; }
+
+/* leaving a scene: the time-of-day grade that settles over it */
+.grade { position: absolute; inset: 0; z-index: 7; pointer-events: none; opacity: 0;
+  background: linear-gradient(180deg, var(--g1), var(--g2)); }
+.stage--opening .grade { z-index: 3; }
+
+/* the far side of a loop with nothing solid inside it (the kalava) */
+.thread__back-dim { opacity: 0.42; }
+
+/* the opening's camera settle after the tap */
+.stage--opening .settle { position: absolute; inset: 0; transform-origin: 30% 60%; }
+
+/* knot glow: positioned with `translate`, so its scale pulse is separate */
+.knot-glow { margin: -32px 0 0 -32px; }

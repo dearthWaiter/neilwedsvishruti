@@ -4,16 +4,15 @@ import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import {
   createThreadSvg, coverBox, planeToScreen, anchorTransform, PINKY_ANCHOR,
-  tipAtDepth, lerp, lerpPt,
+  tipAtDepth, lerp, lerpPt, pathRange, indexAtLength, findCrossing, pxPerIndex,
 } from "./thread.js";
 import { glowPoints } from "./fx.js";
 import { TIP_LINE } from "./event.js";
 import LIGHTS from "./lights.json";
 import { setSrc } from "./lazy.js";
+import { seam, swayAll, swayDue, reveal, EASE_OUT, smoothStep } from "./motion.js";
 
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
-const sway = (P, time, reduced, keep) => (reduced ? P : P.map(([x, y], i) =>
-  keep(i) ? [x, y] : [x + 2 * Math.sin(time * 0.7 + i * 1.3), y + 1.5 * Math.cos(time * 0.55 + i)]));
 
 function srcsetImg(im, manifest, key) {
   const a = manifest[`${key}@750`], b = manifest[`${key}@1080`];
@@ -29,24 +28,30 @@ function focusBox(W, H, u = S7_FOCUS_U) {
 }
 const place = (el, box) => Object.assign(el.style, { width: `${box.w}px`, height: `${box.h}px`, left: `${box.x}px`, top: `${box.y}px` });
 
-// Keep a card's beats in a timeline: fade in with a 12px rise, out the same way.
-// (reduced motion: a plain crossfade, no drift)
-const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-function beat(tl, el, dim, inAt, outAt) {
-  const D = REDUCED ? 0 : 12;
-  tl.fromTo(el, { autoAlpha: 0, y: D }, { autoAlpha: 1, y: 0, duration: 18, ease: "power1.out" }, inAt);
-  tl.to(dim, { opacity: 0.25, duration: 18 }, inAt);
-  if (outAt != null) {
-    tl.to(el, { autoAlpha: 0, y: -D, duration: 18, ease: "power1.in" }, outAt);
-    tl.to(dim, { opacity: 0, duration: 18 }, outAt);
+// Interval arithmetic for drawing a thread in pieces: which stretches of
+// [0, tip] are drawn in front, which go round the back (masked or faint), and
+// which are left as tiny gaps (a knot's under-crossing).
+function cut(ranges, minus) {
+  let out = ranges;
+  for (const [c, d] of minus) {
+    out = out.flatMap(([x, y]) => (d <= x || c >= y) ? [[x, y]]
+      : [[x, Math.max(x, c)], [Math.min(y, d), y]].filter(([p, q]) => q - p > 1e-4));
   }
+  return out;
 }
+function compose(tip, backs, gaps = []) {
+  const clip = (r) => r.map(([a, b]) => [a, Math.min(b, tip)]).filter(([a, b]) => b > a);
+  const b = clip(backs), g = clip(gaps);
+  return { front: cut([[0, tip]], [...b, ...g]), back: cut(b, g) };
+}
+const dOf = (P, ranges) => ranges.map(([a, b]) => pathRange(P, a, b)).join("");
 
 // ===========================================================================
 // Screen 7 · Prayagraj: three beats over the Sangam, the river shimmering
 // ===========================================================================
 export function buildPrayagraj(stage, manifest, { reduced }, seg) {
   const pinVh = seg.vh - 100;
+  const M = reduced ? 0 : 1;
   stage.classList.add("stage--event", "stage--s7");
   stage.innerHTML = `
     <div class="plane plane--plate"><img alt="" decoding="async"></div>
@@ -90,6 +95,7 @@ export function buildPrayagraj(stage, manifest, { reduced }, seg) {
   glowPoints(plate, [...LIGHTS.s7.map(([u, v]) => [u, v, 1]), ...scatter], { kind: "sparkle", size: 10 });
 
   const beats = [...stage.querySelectorAll(".beat-card")];
+  const beatRv = beats.map((el) => reveal(el));
   const thread = createThreadSvg($(".thread-slot"));
 
   let W, H, R, keys;
@@ -100,39 +106,54 @@ export function buildPrayagraj(stage, manifest, { reduced }, seg) {
     thread.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     // in from the top, behind the beats, then down over the river on the
     // right (clear of the couple), toward the water, and on to the RSVP
+    const top = seam.top(seg.xIn, W, H), bot = seam.bottom(seg.xOut, W, H);
     R = [
-      [seg.xIn * W, 0], [seg.xIn * W, 0.1 * H], [0.62 * W, 0.3 * H],
-      [0.88 * W, 0.47 * H], [0.92 * W, 0.64 * H], [0.87 * W, 0.84 * H],
-      [seg.xOut * W, 0.93 * H], [seg.xOut * W, H],
+      [seg.xIn * W, 0], top.next, [0.62 * W, 0.3 * H],
+      [0.88 * W, 0.47 * H], [0.92 * W, 0.64 * H], [0.87 * W, 0.8 * H],
+      bot.prev, [seg.xOut * W, H],
     ];
+    R.head = top.head; R.tail = bot.tail;
     keys = R.map((p) => p[1]);
   }
 
-  const st = { entry: 0, tipA: 0, drift: 0, soft: 0 };
+  const st = { entry: 0, tipA: 0, drift: 0, soft: 0, arrive: 1, leave: 0 };
+  const dimObj = { card: 0 };
   let time = 0;
   const tipY = () => Math.max(st.entry * TIP_LINE * H, st.tipA * H);
   function drawThread() {
-    thread.draw(sway(R, time, reduced, (i) => i < 2 || i > R.length - 3), tipAtDepth(keys, tipY()));
+    const P = reduced ? R : swayAll(R, stage.getBoundingClientRect().top + window.scrollY, time);
+    thread.draw(P, tipAtDepth(keys, tipY()));
   }
+  const paintDim = () => { dim.style.opacity = Math.max(dimObj.card, 0.3 * st.soft).toFixed(3); };
   function render() {
     const d = reduced ? 0 : st.drift; // reduced motion: no parallax
-    plate.style.transform = `translate3d(0, ${(-0.015 * H * d).toFixed(1)}px, 0)`;
-    couple.style.transform = `translate3d(0, ${(-0.04 * H * d).toFixed(1)}px, 0) scale(${(1 + 0.02 * d).toFixed(4)})`;
+    // arriving and leaving, the scene drifts at 0.65x the page: the camera passing
+    const pass = M * H * (0.35 * st.leave - 0.35 * (1 - st.arrive));
+    plate.style.transform = `translate3d(0, ${(-0.015 * H * d + pass).toFixed(1)}px, 0)`;
+    couple.style.transform = `translate3d(0, ${(-0.04 * H * d + pass).toFixed(1)}px, 0) scale(${(1 + 0.02 * d).toFixed(4)})`;
+    blur.style.transform = `translate3d(0, ${pass.toFixed(1)}px, 0)`;
     blur.style.opacity = st.soft.toFixed(3);
+    paintDim();
     drawThread();
   }
 
   measure();
-  const tl = gsap.timeline({ paused: true, defaults: { ease: "none" }, onUpdate: render });
+  let lastT = 0;
+  const WINDOWS = [[21, 61], [75, 119], [133, 173]]; // each beat's visible stretch (vh)
+  function onScroll() {
+    const t = tl.time(), fwd = t >= lastT;
+    lastT = t;
+    let anyOn = false;
+    WINDOWS.forEach(([a, b], i) => { const on = t >= a && t < b; beatRv[i].set(on, fwd); anyOn = anyOn || on; });
+    gsap.to(dimObj, { card: anyOn ? 0.25 : 0, duration: 0.5, ease: EASE_OUT, overwrite: true, onUpdate: paintDim });
+    render();
+  }
+  const tl = gsap.timeline({ paused: true, defaults: { ease: "none" }, onUpdate: onScroll });
   tl.to($(".edge--top"), { opacity: 0, duration: 30 }, 0);
   tl.to(st, { drift: 1, duration: pinVh }, 0);
   tl.to(st, { tipA: 1, duration: 150, ease: "power1.inOut" }, 20);
-  beat(tl, beats[0], dim, 12, 52);
-  beat(tl, beats[1], dim, 66, 110);
-  beat(tl, beats[2], dim, 124, 164);
   // soften toward the RSVP, whose backdrop is this same scene, blurred
   tl.to(st, { soft: 1, duration: 30, ease: "power1.inOut" }, pinVh - 40);
-  tl.to(dim, { opacity: 0.3, duration: 30 }, pinVh - 40);
   tl.to($(".edge--bottom"), { opacity: 1, duration: 30 }, pinVh - 30);
   tl.to({}, { duration: 1 }, pinVh - 1);
 
@@ -140,9 +161,17 @@ export function buildPrayagraj(stage, manifest, { reduced }, seg) {
     trigger: stage.parentElement, start: `top ${TIP_LINE * 100}%`, end: "top top",
     onUpdate: (s) => { st.entry = s.progress; render(); },
   });
+  ScrollTrigger.create({
+    trigger: stage.parentElement, start: "top bottom", end: "top top",
+    onUpdate: (s) => { st.arrive = s.progress; render(); },
+  });
+  ScrollTrigger.create({
+    trigger: stage.parentElement, start: "bottom bottom", end: "bottom top",
+    onUpdate: (s) => { st.leave = s.progress; render(); },
+  });
   let visible = false;
   ScrollTrigger.create({ trigger: stage.parentElement, start: "top bottom", end: "bottom top", onToggle: (s) => { visible = s.isActive; } });
-  if (!reduced) gsap.ticker.add((t) => { time = t; if (visible) drawThread(); });
+  if (!reduced) gsap.ticker.add((t) => { time = t; if (visible && swayDue()) drawThread(); });
   render();
   return { tl, refresh() { measure(); render(); } };
 }
@@ -164,6 +193,7 @@ const BRIDGE_N = 8;
 
 export function buildClosing(stage, manifest, { reduced }, seg, { onWatchAgain }) {
   const pinVh = seg.vh - 100;
+  const M = reduced ? 0 : 1;
   stage.classList.add("stage--event", "stage--s8");
   stage.innerHTML = `
     <div class="plane plane--plate"><img alt="" decoding="async"></div>
@@ -190,8 +220,10 @@ export function buildClosing(stage, manifest, { reduced }, seg, { onWatchAgain }
   srcsetImg(master.querySelector("img"), manifest, "s7_master");
   srcsetImg(hands.querySelector("img"), manifest, "s8_hands");
   const [beat1, closing] = stage.querySelectorAll(".beat-card");
+  const beatRv = reveal(beat1), closingRv = reveal(closing);
   $(".btn--again").addEventListener("click", onWatchAgain);
-  const thread = createThreadSvg($(".thread-slot"));
+  // the back layer is masked by both little fingers: the loops go round them
+  const thread = createThreadSvg($(".thread-slot"), { back: "mask" });
 
   let W, H, box, mbox;
   function measure() {
@@ -203,24 +235,31 @@ export function buildClosing(stage, manifest, { reduced }, seg, { onWatchAgain }
     thread.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   }
 
+  // `st`: scroll targets; `sm`: the same, smoothed (~0.12s) for the camera and
+  // the pen. `cinch`: the final pull, played in time once the knot has formed.
   const st = {
-    entry: 0, tipA: 0, zoom: 0, hands: 0,
-    tip: 0,      // point-index tip, once the thread is among the hands
+    entry: 0, tipA: 0, zoom: 0, hands: 0, arrive: 1,
+    pHis: 0,     // the pen round his little finger (tied there since Screen 1)
+    pX: 0,       // across to hers
+    pH: 0,       // round hers
     loose: 1.35, // loop slack (1 = snug)
     knot: 0,     // 0 = slack between the fingers, 1 = drawn into a knot
   };
+  const SMOOTH = ["entry", "tipA", "zoom", "hands", "arrive", "pHis", "pX", "pH", "loose", "knot"];
+  const sm = { ...st };
+  const cinch = { his: 0, her: 0, knot: 0 };
   let time = 0;
 
   // master: pushes into the couple's hands, drifting them onto the anchor
   const masterT = () => {
     const hx = mbox.x + S7_HANDS[0] * mbox.w, hy = mbox.y + S7_HANDS[1] * mbox.h;
-    const z = reduced ? 0 : st.zoom; // reduced motion: no push-in, just the crossfade
-    return { tx: (PINKY_ANCHOR[0] * W - hx) * z, ty: (PINKY_ANCHOR[1] * H - hy) * z,
+    const z = reduced ? 0 : sm.zoom; // reduced motion: no push-in, just the crossfade
+    return { tx: (PINKY_ANCHOR[0] * W - hx) * z, ty: (PINKY_ANCHOR[1] * H - hy) * z - M * 0.35 * H * (1 - sm.arrive),
              s: 1 + 0.6 * z, ou: S7_HANDS[0], ov: S7_HANDS[1] };
   };
   const handsT = () => {
     const t = anchorTransform(box, W, H, HIS.c[0], HIS.c[1], HANDS_SCALE, PINKY_ANCHOR[0] * W, PINKY_ANCHOR[1] * H);
-    if (!reduced) t.s *= 1 + 0.06 * (1 - st.hands); // a last touch of push as it crossfades in
+    if (!reduced) t.s *= 1 + 0.06 * (1 - sm.hands); // the push carries on as it crossfades in
     return t;
   };
 
@@ -240,27 +279,32 @@ export function buildClosing(stage, manifest, { reduced }, seg, { onWatchAgain }
 
   // The thread, from the top of the frame, down to his little finger (tied
   // there since Screen 1), across to hers, looped, and drawn into a knot.
-  // Returns [points, index of his loop start, bridge start, her loop start, end].
   function points() {
-    const h = st.hands;
+    const h = sm.hands;
     const mT = masterT(), hT = handsT();
     const onM = (u, v) => planeToScreen(mbox, u, v, mT);
     const onH = (u, v) => planeToScreen(box, u, v, hT);
     const hm = onM(...S7_HANDS);
     const both = (p) => lerpPt(hm, onH(...p), h);
 
-    const P = [[seg.xIn * W, 0], [seg.xIn * W, 0.1 * H]];
+    const top = seam.top(seg.xIn, W, H);
+    const P = [[seg.xIn * W, 0], top.next];
+    P.head = top.head;
     const his = both(HIS.c);
     P.push([lerp(seg.xIn * W, his[0], 0.35), 0.3 * H]);
     P.push([lerp(seg.xIn * W, his[0], 0.8) - 10, lerp(0.3 * H, his[1], 0.72)]);
     const iHis = P.length;
-    for (const p of loop(HIS, st.loose, st.knot)) P.push(both(p));
+    // his loop closes on itself (like hers), so its far half ends exactly
+    // where the loop does and the stretch toward the knot is all in front
+    const hisLoop = loop(HIS, sm.loose * (1 - 0.06 * cinch.his), sm.knot);
+    for (const p of hisLoop) P.push(both(p));
+    P.push(both(hisLoop[0]));
 
     // the bridge: slack sagging below the fingertips, which gathers up into a
     // small overhand knot in the gap between the fingers as `knot` goes to 1
     const iBridge = P.length;
-    const k = gsap.parseEase("power2.inOut")(st.knot);
-    const kr = lerp(16, 8.5, clamp01((st.knot - 0.35) / 0.65)) / 1080; // knot radius, tightening
+    const k = gsap.parseEase("power2.inOut")(sm.knot);
+    const kr = (lerp(16, 8.5, clamp01((sm.knot - 0.35) / 0.65)) * (1 - 0.14 * cinch.knot)) / 1080;
     for (let i = 0; i < BRIDGE_N; i++) {
       const t = (i + 1) / (BRIDGE_N + 1);
       const sag = [lerp(HX(500), HX(566), t), HY(900) + Math.sin(t * Math.PI) * HY(62)];
@@ -270,63 +314,148 @@ export function buildClosing(stage, manifest, { reduced }, seg, { onWatchAgain }
     }
     const iHer = P.length;
     // her loop runs the other way round, as a mirror of his, and closes on itself
-    const hers = loop(HERS, st.loose, st.knot).reverse();
+    const hers = loop(HERS, sm.loose * (1 - 0.06 * cinch.her), sm.knot).reverse();
     for (const p of hers) P.push(both(p));
     P.push(both(hers[0]));
-    return { P, iHis, iBridge, iHer };
+    return { P, iHis, iBridge, iHer, onH };
+  }
+
+  // both little fingers, as thick lines along their axes (the back-layer mask)
+  function fingerOccluders(onH) {
+    if (sm.hands < 0.5) return [];
+    const s = handsT().s;
+    return [HIS, HERS].map((f) => {
+      const L = 7 * 17, w = 2 * f.half * 1080 * 1.1;
+      const a = onH(f.c[0] - (f.dir[0] * L / 2) / 1080, f.c[1] - (f.dir[1] * L / 2) / 1620);
+      const b = onH(f.c[0] + (f.dir[0] * L / 2) / 1080, f.c[1] + (f.dir[1] * L / 2) / 1620);
+      return [a[0], a[1], b[0], b[1], (w / 1080) * box.w * s];
+    });
   }
 
   function render() {
     const mT = masterT();
     master.style.transformOrigin = `${mT.ou * 100}% ${mT.ov * 100}%`;
     master.style.transform = `translate3d(${mT.tx.toFixed(1)}px, ${mT.ty.toFixed(1)}px, 0) scale(${mT.s.toFixed(4)})`;
+    // a whisper of blur at the height of the dissolve hides the double exposure
+    const bell = M * Math.sin(Math.PI * clamp01(sm.hands));
+    master.style.filter = bell > 0.02 ? `blur(${(2 * bell).toFixed(2)}px)` : "";
     const hT = handsT();
     hands.style.transformOrigin = `${hT.ou * 100}% ${hT.ov * 100}%`;
     hands.style.transform = `translate3d(${hT.tx.toFixed(1)}px, ${hT.ty.toFixed(1)}px, 0) scale(${hT.s.toFixed(4)})`;
-    hands.style.opacity = st.hands.toFixed(3);
-    hands.style.visibility = st.hands > 0.001 ? "inherit" : "hidden";
+    hands.style.opacity = sm.hands.toFixed(3);
+    hands.style.visibility = sm.hands > 0.001 ? "inherit" : "hidden";
     // the knot's soft glow sits on the knot itself
     const kp = planeToScreen(box, KNOT[0], KNOT[1], hT);
-    glow.style.transform = `translate3d(${kp[0].toFixed(1)}px, ${kp[1].toFixed(1)}px, 0) translate(-50%, -50%)`;
+    glow.style.left = "0"; glow.style.top = "0";
+    glow.style.translate = `${kp[0].toFixed(1)}px ${kp[1].toFixed(1)}px`;
     drawThread();
   }
 
   function drawThread() {
-    const { P, iHis } = points();
-    const keep = (i) => i < 2 || i >= iHis - 1; // everything on the fingers stays exactly put
-    const Ps = sway(P, time, reduced, keep);
-    // until it reaches his finger, the tip follows TIP_LINE down the screen
-    const depthTip = tipAtDepth(Ps.slice(0, iHis + 1).map((p, i) => (i < 2 ? i * 0.1 * H : p[1])), Math.max(st.entry * TIP_LINE * H, st.tipA * H));
-    thread.draw(Ps, Math.max(depthTip, st.tip));
+    const { P, iHis, iBridge, iHer, onH } = points();
+    const keep = (i) => i >= iHis - 1; // everything on the fingers stays exactly put
+    const Ps = reduced ? P : swayAll(P, stage.getBoundingClientRect().top + window.scrollY, time, keep);
+    // until it reaches his finger, the tip follows TIP_LINE down the screen;
+    // then the pen goes stroke by stroke, at an even speed along the thread
+    const keys = [];
+    Ps.slice(0, iHis + 1).forEach((p, i) => keys.push(i ? Math.max(p[1], keys[i - 1] + 0.01) : p[1]));
+    let tip = tipAtDepth(keys, Math.max(sm.entry * TIP_LINE * H, sm.tipA * H));
+    const last = Ps.length - 1;
+    if (sm.pH > 0) tip = indexAtLength(Ps, iHer, last, sm.pH);
+    else if (sm.pX > 0) tip = indexAtLength(Ps, iHis + LOOP_N, iHer, sm.pX);
+    else if (sm.pHis > 0) tip = Math.max(tip, indexAtLength(Ps, iHis, iHis + LOOP_N, sm.pHis));
+
+    // round the backs of the fingers: his loop's far half, and hers (which
+    // runs the other way round, so it's her first three points and the close)
+    const backs = [[iHis + LOOP_N / 2, iHis + LOOP_N], [iHer, iHer + 3], [iHer + LOOP_N - 1, last]];
+    // the knot's crossing: a small gap in the under strand, as knots are drawn
+    const gaps = [];
+    if (sm.knot > 0.4) {
+      const c = findCrossing(Ps, iBridge - 1, iHer);
+      if (c) {
+        const e = 2.6 / Math.max(1, pxPerIndex(Ps, c.u));
+        gaps.push([c.u - e, c.u + e]);
+      }
+    }
+    const parts = compose(tip, backs, gaps);
+    thread.setD(dOf(Ps, parts.front));
+    thread.setBack(dOf(Ps, parts.back));
+    thread.setOccluders(fingerOccluders(onH));
   }
 
   measure();
-  const idx = points();
-  const tl = gsap.timeline({ paused: true, defaults: { ease: "none" }, onUpdate: render });
+  // Scroll only moves targets and triggers; the ticker smooths and draws.
+  let lastT = 0, knotted = false, awake = true;
+  function onScroll() {
+    const t = tl.time(), fwd = t >= lastT;
+    lastT = t;
+    beatRv.set(t >= 19 && t < 67, fwd);
+    closingRv.set(t >= 322, fwd);
+    gsap.to(dim, { opacity: (t >= 19 && t < 67) || t >= 322 ? 0.25 : 0, duration: 0.5, ease: EASE_OUT, overwrite: true });
+    // the cinch: when the knot has formed, the loops and knot pull snug in
+    // time (his first, hers a beat later) and the knot's glow blooms
+    const formed = st.knot >= 0.999;
+    if (!reduced && formed !== knotted) {
+      knotted = formed;
+      if (formed) {
+        gsap.to(cinch, { his: 1, duration: 0.6, ease: "back.out(1.4)", overwrite: "auto" });
+        gsap.to(cinch, { her: 1, duration: 0.6, delay: 0.12, ease: "back.out(1.4)", overwrite: "auto" });
+        gsap.to(cinch, { knot: 1, duration: 0.7, delay: 0.05, ease: "back.out(1.4)", overwrite: "auto" });
+        gsap.fromTo(glow, { opacity: 0, scale: 0.6 }, {
+          keyframes: [{ opacity: 0.9, scale: 1, duration: 0.45, ease: EASE_OUT }, { opacity: 0.5, duration: 0.45, ease: "sine.inOut" }],
+          delay: 0.1, overwrite: true,
+        });
+      } else {
+        gsap.to(cinch, { his: 0, her: 0, knot: 0, duration: 0.3, ease: EASE_OUT, overwrite: true });
+        gsap.to(glow, { opacity: 0, duration: 0.3, overwrite: true });
+      }
+    }
+    if (reduced) gsap.set(glow, { opacity: formed ? 0.5 : 0, scale: 1 });
+    awake = true;
+  }
+  const tl = gsap.timeline({ paused: true, defaults: { ease: "none" }, onUpdate: onScroll });
   tl.to($(".edge--top"), { opacity: 0, duration: 30 }, 0);
-  beat(tl, beat1, dim, 10, 58);
-  // the camera pushes slowly into the couple, then crossfades into the hands
-  tl.to(st, { zoom: 1, duration: 80, ease: "power1.inOut" }, 40);
+  // the camera pushes slowly into the couple, and keeps going through the
+  // (short, softened) dissolve into the hands
+  tl.to(st, { zoom: 1, duration: 90, ease: "power1.inOut" }, 40);
   tl.to(st, { tipA: 0.9, duration: 70, ease: "power1.inOut" }, 30);
-  tl.to(st, { tip: idx.iHis + LOOP_N - 0.01, duration: 20, ease: "power1.inOut" }, 98); // already looped on his finger
-  tl.to(st, { hands: 1, duration: 26, ease: "power1.inOut" }, 104);
+  tl.to(st, { pHis: 1, duration: 20, ease: "power1.inOut" }, 100); // already looped on his finger
+  tl.to(st, { hands: 1, duration: 16, ease: "power1.inOut" }, 112);
   // the payoff, slow: across to her finger, around it, then the knot
-  tl.to(st, { tip: idx.iHer, duration: 34, ease: "power1.inOut" }, 136);
-  tl.to(st, { tip: idx.P.length - 1, duration: 26, ease: "power1.inOut" }, 170);
-  tl.to(st, { loose: 1, duration: 30, ease: "power2.inOut" }, 196);
-  tl.to(st, { knot: 1, duration: 40, ease: "none" }, 198);
-  tl.fromTo(glow, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 14, ease: "power1.out" }, 234);
-  tl.to(glow, { opacity: 0.55, duration: 10 }, 248);
-  beat(tl, closing, dim, 244, null);
+  tl.to(st, { pX: 1, duration: 60, ease: "power2.inOut" }, 140);
+  tl.to(st, { pH: 1, duration: 50, ease: "sine.inOut" }, 200);
+  tl.to(st, { loose: 1, duration: 50, ease: "power2.inOut" }, 250);
+  tl.to(st, { knot: 1, duration: 60, ease: "power2.inOut" }, 252);
   tl.to({}, { duration: 1 }, pinVh - 1);
 
   ScrollTrigger.create({
     trigger: stage.parentElement, start: `top ${TIP_LINE * 100}%`, end: "top top",
-    onUpdate: (s) => { st.entry = s.progress; render(); },
+    onUpdate: (s) => { st.entry = s.progress; awake = true; },
   });
-  let visible = false;
-  ScrollTrigger.create({ trigger: stage.parentElement, start: "top bottom", end: "bottom top", onToggle: (s) => { visible = s.isActive; } });
-  if (!reduced) gsap.ticker.add((t) => { time = t; if (visible) drawThread(); });
+  ScrollTrigger.create({
+    trigger: stage.parentElement, start: "top bottom", end: "top top",
+    onUpdate: (s) => { st.arrive = s.progress; awake = true; },
+  });
+  let visible = false, lastTick = 0;
+  ScrollTrigger.create({
+    trigger: stage.parentElement, start: "top bottom", end: "bottom top",
+    onToggle: (s) => { visible = s.isActive; if (visible) { Object.assign(sm, st); render(); } },
+  });
+  gsap.ticker.add((t) => {
+    const dt = lastTick ? t - lastTick : 0;
+    lastTick = t; time = t;
+    if (!visible) return;
+    let moving = false;
+    if (awake) {
+      for (const k of SMOOTH) {
+        const v = smoothStep(sm[k], st[k], dt);
+        if (v !== sm[k]) { sm[k] = v; moving = true; }
+      }
+      if (!moving) awake = false;
+    }
+    if (moving || gsap.isTweening(cinch)) render();
+    else if (swayDue()) drawThread();
+  });
   render();
-  return { tl, refresh() { measure(); render(); }, _debug: { st, render } };
+  return { tl, refresh() { measure(); render(); }, _debug: { st, sm, render } };
 }

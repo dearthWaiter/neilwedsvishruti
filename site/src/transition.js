@@ -6,6 +6,7 @@ import ScrollTrigger from "gsap/ScrollTrigger";
 import { createThreadSvg, tipAtDepth } from "./thread.js";
 import { spriteField, starField } from "./fx.js";
 import { TIP_LINE } from "./event.js";
+import { seam, swayAll, swayDue } from "./motion.js";
 
 export function buildTransition(el, manifest, { reduced }, seg) {
   el.classList.add("transition", `transition--${seg.id}`);
@@ -22,15 +23,19 @@ export function buildTransition(el, manifest, { reduced }, seg) {
     spriteField(el, keys.map((k) => `/${manifest[k].file}`), { count: 12, reduced });
   }
 
-  // a lazy S between the two joins, leaving and arriving vertically
+  // a lazy S between the two joins, leaving and arriving along each seam's
+  // shared direction (seam.*), so it meets its neighbours without an elbow
   scrollThread(el, reduced, (W, H) => {
-    const a = seg.xIn * W, b = seg.xOut * W, sw = (seg.xIn < seg.xOut ? -1 : 1) * 0.1 * W;
-    return [
-      [a, 0], [a, 0.1 * H],
-      [a + (b - a) * 0.3 + sw, 0.38 * H],
-      [a + (b - a) * 0.7 - sw, 0.64 * H],
-      [b, 0.9 * H], [b, H],
+    const a = seg.xIn * W, b = seg.xOut * W, sw = (seg.xIn < seg.xOut ? -1 : 1) * 0.08 * W;
+    const top = seam.top(seg.xIn, W, H), bot = seam.bottom(seg.xOut, W, H);
+    const P = [
+      [a, 0], top.next,
+      [a + (b - a) * 0.35 + sw, 0.4 * H],
+      [a + (b - a) * 0.68 - sw, 0.66 * H],
+      bot.prev, [b, H],
     ];
+    P.head = top.head; P.tail = bot.tail;
+    return P;
   });
 
   if (stars) {
@@ -60,14 +65,14 @@ export function scrollThread(el, reduced, route, { z = 2 } = {}) {
     thread.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     P = route(W, H);
     keys = P.map((p, i) => Math.max(p[1], i ? P[i - 1][1] : 0));
+    for (let i = 1; i < keys.length; i++) if (keys[i] <= keys[i - 1]) keys[i] = keys[i - 1] + 0.01;
   }
   measure();
 
   let prog = 0, time = 0;
   const draw = () => {
-    const pts = P.map(([x, y], i) => (reduced || i < 2 || i > P.length - 3) ? [x, y]
-      : [x + 2 * Math.sin(time * 0.7 + i * 1.3), y + 1.5 * Math.cos(time * 0.55 + i)]);
-    thread.draw(pts, tipAtDepth(keys, prog * H));
+    const top = el.getBoundingClientRect().top + window.scrollY; // page position: sway phase
+    thread.draw(swayAll(P, top, time), tipAtDepth(keys, prog * H));
   };
 
   ScrollTrigger.create({
@@ -79,6 +84,6 @@ export function scrollThread(el, reduced, route, { z = 2 } = {}) {
   });
   let visible = false;
   ScrollTrigger.create({ trigger: el, start: "top bottom", end: "bottom top", onToggle: (s) => { visible = s.isActive; } });
-  if (!reduced) gsap.ticker.add((t) => { time = t; if (visible) draw(); });
+  if (!reduced) gsap.ticker.add((t) => { time = t; if (visible && swayDue()) draw(); });
   return { refresh() { measure(); draw(); } };
 }

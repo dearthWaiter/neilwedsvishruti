@@ -4,6 +4,7 @@
 
 import { RSVP_URL } from "./config.js";
 import { scrollThread } from "./transition.js";
+import { seam } from "./motion.js";
 
 const DONE_KEY = "nv-rsvp-done";
 
@@ -112,9 +113,14 @@ export function buildRsvp(el, manifest, { reduced }, seg) {
   });
 
   // the thread comes down the left, passes behind the card, and leaves for Screen 8
-  scrollThread(el, reduced, (W, H) => [
-    [seg.xIn * W, 0], [seg.xIn * W, 0.08 * H],
-    [0.08 * W, 0.26 * H], [0.07 * W, 0.5 * H],
-    [0.2 * W, 0.72 * H], [seg.xOut * W, 0.9 * H], [seg.xOut * W, H],
-  ], { z: 3 });
+  scrollThread(el, reduced, (W, H) => {
+    const top = seam.top(seg.xIn, W, H), bot = seam.bottom(seg.xOut, W, H);
+    const P = [
+      [seg.xIn * W, 0], top.next,
+      [0.08 * W, 0.26 * H], [0.07 * W, 0.5 * H],
+      [0.2 * W, 0.72 * H], bot.prev, [seg.xOut * W, H],
+    ];
+    P.head = top.head; P.tail = bot.tail;
+    return P;
+  }, { z: 3 });
 }

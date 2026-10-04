@@ -337,7 +337,7 @@ Light card, accent sindoor and marigold:
 >
 > Many temples, many prayers, and now, one more ritual. Together.
 >
-> TO WEAR · Reds, marigolds and golds
+> TO WEAR · Pastels and temple aesthetics
 
 **Part B:** the icon-and-thread mechanic, with the five Wedding icons. **The desi bridge:** as the thread passes the havan kund icon, it briefly wraps a wrist-width loop, like a kalava (mauli), before continuing. Keep it subtle: 1 to 2 seconds of scroll.
 

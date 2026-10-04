@@ -31,7 +31,7 @@ export const EVENTS = {
     title: "The Wedding",
     theme: "Temple Mornings",
     story: "Many temples, many prayers, and now, one more ritual. Together.",
-    wear: "Reds, marigolds and golds",
+    wear: "Pastels and temple aesthetics",
     date: "Saturday, 21 November 2026", time: "12 noon onwards",
     venue: "Welcomhotel by ITC Hotels", address: "16, Tashkent Marg, Civil Lines, Prayagraj", link: ITC,
     icons: ["s5_temple", "s5_saibaba", "s5_bhog", "s5_gate", "s5_havan"],
